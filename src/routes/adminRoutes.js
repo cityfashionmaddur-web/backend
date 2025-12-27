@@ -10,6 +10,7 @@ import {
   getAdminOrders,
   getAdminOrderById,
   updateOrderStatus,
+  updateOrderTracking,
   getAdminCustomers,
   getAdminCustomerById,
   getAdminCustomerOrders
@@ -49,6 +50,7 @@ router.delete("/products/:id", authRequired, adminOnly, deleteAdminProduct);
 router.get("/orders", authRequired, adminOnly, getAdminOrders);
 router.get("/orders/:id", authRequired, adminOnly, getAdminOrderById);
 router.put("/orders/:id/status", authRequired, adminOnly, updateOrderStatus);
+router.put("/orders/:id/tracking", authRequired, adminOnly, updateOrderTracking);
 
 // Customers
 router.get("/customers", authRequired, adminOnly, getAdminCustomers);

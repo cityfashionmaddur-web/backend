@@ -68,6 +68,8 @@ model Order {
   postalCode   String?
   country      String?
   phone        String?
+  trackingCode String?
+  trackingCarrier String?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 

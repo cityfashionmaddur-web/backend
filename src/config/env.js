@@ -1,5 +1,19 @@
 import dotenv from 'dotenv';
-dotenv.config();
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// --- FIX START: Manually define __dirname for ES Modules ---
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+// --- FIX END ---
+
+// Load .env from the root (../../ from this file)
+const result = dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+
+// Optional: specific error logging to help debug
+if (result.error) {
+  console.log("⚠️  .env file not found at:", path.resolve(__dirname, '../../.env'));
+}
 
 export const ENV = {
   PORT: process.env.PORT || 4000,

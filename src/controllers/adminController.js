@@ -270,6 +270,24 @@ export async function updateOrderStatus(req, res) {
   }
 }
 
+// UPDATE ORDER TRACKING
+export async function updateOrderTracking(req, res) {
+  try {
+    const { id } = req.params;
+    const { trackingCode = null, trackingCarrier = null } = req.body || {};
+
+    const updated = await prisma.order.update({
+      where: { id: Number(id) },
+      data: { trackingCode, trackingCarrier }
+    });
+
+    res.json(updated);
+  } catch (err) {
+    console.error("updateOrderTracking error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+}
+
 
 
 // ---------------------------
