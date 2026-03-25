@@ -57,7 +57,7 @@ export async function listProducts(req, res) {
     const [products, total, priceBounds, categoryCounts] = await Promise.all([
       prisma.product.findMany({
         where: filters,
-        include: { productImages: true, category: true },
+        include: { productImages: true, category: true, variants: true },
         skip,
         take: limit,
         orderBy
@@ -106,7 +106,7 @@ export async function getProductBySlug(req, res) {
 
     const product = await prisma.product.findUnique({
       where: { slug },
-      include: { productImages: true, category: true }
+      include: { productImages: true, category: true, variants: true }
     });
 
     if (!product)
@@ -118,7 +118,7 @@ export async function getProductBySlug(req, res) {
         active: true,
         categoryId: product.categoryId ?? undefined
       },
-      include: { productImages: true, category: true },
+      include: { productImages: true, category: true, variants: true },
       take: 6,
       orderBy: { id: "desc" }
     });
@@ -148,7 +148,7 @@ export async function searchProducts(req, res) {
           mode: "insensitive"
         }
       },
-      include: { productImages: true, category: true },
+      include: { productImages: true, category: true, variants: true },
       take: 50
     });
 
@@ -178,7 +178,7 @@ export async function filterProducts(req, res) {
           lte: max
         }
       },
-      include: { productImages: true, category: true }
+      include: { productImages: true, category: true, variants: true }
     });
 
     res.json(results);
@@ -214,7 +214,7 @@ export async function getRelatedProducts(req, res) {
           lte: Number(baseProduct.price) + 200
         }
       },
-      include: { productImages: true, category: true },
+      include: { productImages: true, category: true, variants: true },
       take: 6
     });
 
@@ -241,7 +241,7 @@ export async function inventoryByIds(req, res) {
 
     const products = await prisma.product.findMany({
       where: { id: { in: ids } },
-      select: { id: true, stock: true, price: true, title: true, slug: true }
+      select: { id: true, price: true, title: true, slug: true, variants: true }
     });
 
     res.json({ products });
@@ -295,7 +295,7 @@ export async function getCategoryWithProducts(req, res) {
       include: {
         products: {
           where: { active: true },
-          include: { productImages: true, category: true },
+          include: { productImages: true, category: true, variants: true },
           orderBy: { id: "desc" }
         }
       }

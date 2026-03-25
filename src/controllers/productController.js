@@ -34,7 +34,7 @@ async function deleteImagesFromStorage(urls = []) {
 // Create Product (Admin Only)
 export async function createProduct(req, res) {
   try {
-    const { title, description, price, stock, images, categoryId } = req.body;
+    const { title, description, price, variants, images, categoryId } = req.body;
 
     if (!title || !price) {
       return res.status(400).json({ message: "Title and price are required" });
@@ -48,14 +48,16 @@ export async function createProduct(req, res) {
         slug,
         description,
         price,
-        stock,
         categoryId: categoryId ? Number(categoryId) : undefined,
         active: true,
         productImages: {
           create: images?.map((url) => ({ url })) || []
+        },
+        variants: {
+          create: variants || [] // expects array of { size: "M", stock: 10 }
         }
       },
-      include: { productImages: true }
+      include: { productImages: true, variants: true }
     });
 
     res.json(product);
@@ -70,7 +72,7 @@ export async function getProducts(req, res) {
   try {
     const products = await prisma.product.findMany({
       where: { active: true },
-      include: { productImages: true, category: true },
+      include: { productImages: true, category: true, variants: true },
       orderBy: { id: 'desc' }
     });
 
@@ -88,7 +90,7 @@ export async function getProductBySlug(req, res) {
 
     const product = await prisma.product.findUnique({
       where: { slug },
-      include: { productImages: true, category: true }
+      include: { productImages: true, category: true, variants: true }
     });
 
     if (!product) return res.status(404).json({ message: "Product not found" });
@@ -104,10 +106,15 @@ export async function getProductBySlug(req, res) {
 export async function updateProduct(req, res) {
   try {
     const { id } = req.params;
-    const { images, ...data } = req.body;
+    const { images, variants, ...data } = req.body;
 
     if (data.categoryId) {
       data.categoryId = Number(data.categoryId);
+    }
+
+    // Remove old stock field if passed from old frontend
+    if ('stock' in data) {
+      delete data.stock;
     }
 
     const updateData = { ...data };
@@ -119,10 +126,17 @@ export async function updateProduct(req, res) {
       };
     }
 
+    if (Array.isArray(variants)) {
+      updateData.variants = {
+        deleteMany: {},
+        create: variants.map(v => ({ size: v.size, stock: Number(v.stock) || 0 }))
+      };
+    }
+
     const product = await prisma.product.update({
       where: { id: Number(id) },
       data: updateData,
-      include: { productImages: true, category: true }
+      include: { productImages: true, category: true, variants: true }
     });
 
     res.json(product);
@@ -145,6 +159,7 @@ export async function deleteProduct(req, res) {
     await prisma.$transaction([
       prisma.orderItem.deleteMany({ where: { productId: Number(id) } }),
       prisma.productImage.deleteMany({ where: { productId: Number(id) } }),
+      prisma.productVariant.deleteMany({ where: { productId: Number(id) } }),
       prisma.product.delete({ where: { id: Number(id) } })
     ]);
 

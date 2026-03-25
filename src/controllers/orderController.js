@@ -61,7 +61,7 @@ export async function createOrder(req, res) {
       if (!product) continue;
       const priceNum = Number(product.price);
       subtotal += priceNum * qty;
-      orderItemsData.push({ productId: pid, quantity: qty, price: priceNum });
+      orderItemsData.push({ productId: pid, quantity: qty, price: priceNum, size: item.size || null });
     }
 
     if (!orderItemsData.length) return res.status(400).json({ message: "No valid items" });
@@ -109,12 +109,26 @@ export async function createOrder(req, res) {
       // 1. Decrement stock for each item
       for (const item of orderItemsData) {
         try {
-          await tx.product.update({
-            where: { id: item.productId, stock: { gte: item.quantity } },
-            data: { stock: { decrement: item.quantity } }
-          });
+          if (item.size) {
+            const variant = await tx.productVariant.findUnique({
+              where: { productId_size: { productId: item.productId, size: item.size } }
+            });
+            if (!variant || variant.stock < item.quantity) {
+              throw new Error(`Insufficient stock for product ID ${item.productId} size ${item.size}`);
+            }
+            await tx.productVariant.update({
+              where: { productId_size: { productId: item.productId, size: item.size } },
+              data: { stock: { decrement: item.quantity } }
+            });
+          } else {
+             // Fallback for products without sizes if any exist
+             const oldPr = await tx.product.findUnique({ where: { id: item.productId } });
+             if (!oldPr) throw new Error(`Product not found`);
+             // We don't have global stock anymore, so just let it pass if no size is specified
+             // assuming it's an unlimited digital product or a legacy product.
+          }
         } catch (err) {
-          throw new Error(`Insufficient stock for product ID ${item.productId}`);
+          throw new Error(err.message.includes('Insufficient') ? err.message : `Insufficient stock for product ID ${item.productId}`);
         }
       }
 

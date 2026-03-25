@@ -94,7 +94,7 @@ export async function getDashboardStats(req, res) {
 export async function getAdminProducts(req, res) {
   try {
     const products = await prisma.product.findMany({
-      include: { productImages: true, category: true },
+      include: { productImages: true, category: true, variants: true },
       orderBy: { id: "desc" }
     });
 
@@ -113,7 +113,7 @@ export async function getAdminProductById(req, res) {
 
     const product = await prisma.product.findUnique({
       where: { id: Number(id) },
-      include: { productImages: true, category: true }
+      include: { productImages: true, category: true, variants: true }
     });
 
     if (!product)
@@ -131,15 +131,28 @@ export async function getAdminProductById(req, res) {
 export async function updateAdminProduct(req, res) {
   try {
     const { id } = req.params;
-    const data = req.body;
+    const { variants, ...data } = req.body;
     if (data.categoryId) {
       data.categoryId = Number(data.categoryId);
+    }
+    
+    if ('stock' in data) {
+      delete data.stock;
+    }
+
+    const updateData = { ...data };
+
+    if (Array.isArray(variants)) {
+      updateData.variants = {
+        deleteMany: {},
+        create: variants.map(v => ({ size: v.size, stock: Number(v.stock) || 0 }))
+      };
     }
 
     const updated = await prisma.product.update({
       where: { id: Number(id) },
-      data,
-      include: { productImages: true, category: true }
+      data: updateData,
+      include: { productImages: true, category: true, variants: true }
     });
 
     res.json(updated);
@@ -163,6 +176,7 @@ export async function deleteAdminProduct(req, res) {
     await prisma.$transaction([
       prisma.orderItem.deleteMany({ where: { productId: Number(id) } }),
       prisma.productImage.deleteMany({ where: { productId: Number(id) } }),
+      prisma.productVariant.deleteMany({ where: { productId: Number(id) } }),
       prisma.product.delete({ where: { id: Number(id) } })
     ]);
 
