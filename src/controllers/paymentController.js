@@ -80,9 +80,16 @@ export async function createRazorpayOrder(req, res) {
       const qty = Math.max(Number(item.quantity) || 1, 1);
       const product = productMap.get(pid);
       if (!product) continue;
-      if (product.stock < qty) {
-        return res.status(400).json({ message: `Insufficient stock for product ID ${pid}` });
+
+      if (item.size) {
+        const variant = await prisma.productVariant.findUnique({
+          where: { productId_size: { productId: pid, size: item.size } }
+        });
+        if (!variant || variant.stock < qty) {
+          return res.status(400).json({ message: `Insufficient stock for product ID ${pid} size ${item.size}` });
+        }
       }
+
       const priceNum = Number(product.price);
       subtotal += priceNum * qty;
       orderItemsData.push({ productId: pid, quantity: qty, price: priceNum, size: item.size || null });
@@ -197,10 +204,12 @@ export async function handleRazorpayWebhook(req, res) {
       updates.status = "PAID";
       await prisma.$transaction(async (tx) => {
         for (const item of order.items) {
-          await tx.product.update({
-            where: { id: item.productId, stock: { gte: item.quantity } },
-            data: { stock: { decrement: item.quantity } }
-          });
+          if (item.size) {
+            await tx.productVariant.updateMany({
+              where: { productId: item.productId, size: item.size, stock: { gte: item.quantity } },
+              data: { stock: { decrement: item.quantity } }
+            });
+          }
         }
         await tx.order.update({
           where: { id: order.id },
