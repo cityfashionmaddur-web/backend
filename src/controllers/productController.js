@@ -34,7 +34,7 @@ async function deleteImagesFromStorage(urls = []) {
 // Create Product (Admin Only)
 export async function createProduct(req, res) {
   try {
-    const { title, description, price, variants, images, categoryId } = req.body;
+    const { title, description, price, compareAtPrice, variants, images, categoryId } = req.body;
 
     if (!title || !price) {
       return res.status(400).json({ message: "Title and price are required" });
@@ -48,6 +48,7 @@ export async function createProduct(req, res) {
         slug,
         description,
         price,
+        compareAtPrice,
         categoryId: categoryId ? Number(categoryId) : undefined,
         active: true,
         productImages: {
