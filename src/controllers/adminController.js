@@ -217,8 +217,8 @@ export async function getAdminOrders(req, res) {
       if (!isNaN(parsedId)) {
         orConditions.push({ id: parsedId });
       }
-      orConditions.push({ user: { name: { contains: search, mode: 'insensitive' } } });
-      orConditions.push({ user: { email: { contains: search, mode: 'insensitive' } } });
+      orConditions.push({ user: { name: { contains: search } } });
+      orConditions.push({ user: { email: { contains: search } } });
     }
 
     const where = {
