@@ -207,8 +207,19 @@ export async function getAdminOrders(req, res) {
     const page = Math.max(Number(req.query.page) || 1, 1);
     const pageSize = Math.min(Math.max(Number(req.query.pageSize) || 10, 1), 100);
     const status = req.query.status;
+    const search = req.query.search || "";
     const from = req.query.from ? new Date(req.query.from) : null;
     const to = req.query.to ? new Date(req.query.to) : null;
+
+    const orConditions = [];
+    if (search) {
+      const parsedId = parseInt(search);
+      if (!isNaN(parsedId)) {
+        orConditions.push({ id: parsedId });
+      }
+      orConditions.push({ user: { name: { contains: search, mode: 'insensitive' } } });
+      orConditions.push({ user: { email: { contains: search, mode: 'insensitive' } } });
+    }
 
     const where = {
       ...(status ? { status } : {}),
@@ -219,7 +230,8 @@ export async function getAdminOrders(req, res) {
               ...(to ? { lte: to } : {})
             }
           }
-        : {})
+        : {}),
+      ...(search ? { OR: orConditions } : {})
     };
     const [orders, total] = await Promise.all([
       prisma.order.findMany({
