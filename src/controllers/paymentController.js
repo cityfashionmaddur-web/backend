@@ -81,7 +81,21 @@ export async function createRazorpayOrder(req, res) {
       const product = productMap.get(pid);
       if (!product) continue;
 
-      if (item.size) {
+      if (product.isCombo) {
+        if (!item.size || !item.size.includes(" | ")) {
+          return res.status(400).json({ message: "Invalid size format for combo" });
+        }
+        const parts = item.size.split(" | ");
+        const topSize = parts[0].replace(" Top", "");
+        const bottomSize = parts[1].replace(" Bottom", "");
+        
+        const topStock = (product.comboTopSizes && product.comboTopSizes[topSize]) || 0;
+        const bottomStock = (product.comboBottomSizes && product.comboBottomSizes[bottomSize]) || 0;
+
+        if (topStock < qty || bottomStock < qty) {
+          return res.status(400).json({ message: `Insufficient stock for combo sizes: Top ${topSize}, Bottom ${bottomSize}` });
+        }
+      } else if (item.size) {
         const variant = await prisma.productVariant.findUnique({
           where: { productId_size: { productId: pid, size: item.size } }
         });
@@ -204,7 +218,31 @@ export async function handleRazorpayWebhook(req, res) {
       updates.status = "PAID";
       await prisma.$transaction(async (tx) => {
         for (const item of order.items) {
-          if (item.size) {
+          const product = await tx.product.findUnique({ where: { id: item.productId } });
+          
+          if (product?.isCombo && item.size && item.size.includes(" | ")) {
+            const parts = item.size.split(" | ");
+            const topSize = parts[0].replace(" Top", "");
+            const bottomSize = parts[1].replace(" Bottom", "");
+            
+            const currentTop = typeof product.comboTopSizes === 'object' && product.comboTopSizes !== null ? { ...product.comboTopSizes } : {};
+            const currentBottom = typeof product.comboBottomSizes === 'object' && product.comboBottomSizes !== null ? { ...product.comboBottomSizes } : {};
+            
+            if (currentTop[topSize] !== undefined) {
+               currentTop[topSize] = Math.max(0, Number(currentTop[topSize]) - item.quantity);
+            }
+            if (currentBottom[bottomSize] !== undefined) {
+               currentBottom[bottomSize] = Math.max(0, Number(currentBottom[bottomSize]) - item.quantity);
+            }
+
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { 
+                comboTopSizes: currentTop,
+                comboBottomSizes: currentBottom
+              }
+            });
+          } else if (item.size) {
             await tx.productVariant.updateMany({
               where: { productId: item.productId, size: item.size, stock: { gte: item.quantity } },
               data: { stock: { decrement: item.quantity } }

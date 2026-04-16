@@ -134,7 +134,7 @@ export async function getAdminProductById(req, res) {
 export async function updateAdminProduct(req, res) {
   try {
     const { id } = req.params;
-    const { variants, ...data } = req.body;
+    const { variants, instagramLink, colorGroup, colorLabel, ...data } = req.body;
     if (data.categoryId) {
       data.categoryId = Number(data.categoryId);
     }
@@ -143,12 +143,12 @@ export async function updateAdminProduct(req, res) {
       delete data.stock;
     }
 
-    const updateData = { ...data };
+    const updateData = { ...data, instagramLink, colorGroup: colorGroup || null, colorLabel: colorLabel || null };
 
     if (Array.isArray(variants)) {
       updateData.variants = {
         deleteMany: {},
-        create: variants.map(v => ({ size: v.size, stock: Number(v.stock) || 0 }))
+        create: variants.map(v => ({ size: v.size, color: v.color || "Default", stock: Number(v.stock) || 0 }))
       };
     }
 

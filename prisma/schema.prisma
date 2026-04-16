@@ -38,6 +38,12 @@ model Product {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   categoryId  Int?
+  instagramLink String?
+  colorGroup  String?
+  colorLabel  String?
+  isCombo     Boolean  @default(false)
+  comboTopSizes Json?
+  comboBottomSizes Json?
   category    Category? @relation(fields: [categoryId], references: [id])
 
   orderItems    OrderItem[]
@@ -50,9 +56,10 @@ model ProductVariant {
   productId Int
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   size      String
+  color     String  @default("Default")
   stock     Int     @default(0)
 
-  @@unique([productId, size])
+  @@unique([productId, size, color])
 }
 
 model ProductImage {
@@ -96,15 +103,31 @@ model OrderItem {
   quantity  Int
   price     Decimal
   size      String?
+  color     String?
+}
+
+model Collection {
+  id        Int      @id @default(autoincrement())
+  name      String
+  slug      String   @unique
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  showInNav Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  categories Category[]
 }
 
 model Category {
-  id          Int       @id @default(autoincrement())
-  name        String
-  slug        String    @unique
-  description String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id           Int         @id @default(autoincrement())
+  name         String
+  slug         String      @unique
+  description  String?
+  collectionId Int?
+  collection   Collection? @relation(fields: [collectionId], references: [id])
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   products Product[]
 }

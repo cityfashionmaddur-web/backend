@@ -61,7 +61,7 @@ export async function createOrder(req, res) {
       if (!product) continue;
       const priceNum = Number(product.price);
       subtotal += priceNum * qty;
-      orderItemsData.push({ productId: pid, quantity: qty, price: priceNum, size: item.size || null });
+      orderItemsData.push({ productId: pid, quantity: qty, price: priceNum, size: item.size || null, color: item.color || null });
     }
 
     if (!orderItemsData.length) return res.status(400).json({ message: "No valid items" });
@@ -111,13 +111,13 @@ export async function createOrder(req, res) {
         try {
           if (item.size) {
             const variant = await tx.productVariant.findUnique({
-              where: { productId_size: { productId: item.productId, size: item.size } }
+              where: { productId_size_color: { productId: item.productId, size: item.size, color: item.color || "Default" } }
             });
             if (!variant || variant.stock < item.quantity) {
               throw new Error(`Insufficient stock for product ID ${item.productId} size ${item.size}`);
             }
             await tx.productVariant.update({
-              where: { productId_size: { productId: item.productId, size: item.size } },
+              where: { productId_size_color: { productId: item.productId, size: item.size, color: item.color || "Default" } },
               data: { stock: { decrement: item.quantity } }
             });
           } else {

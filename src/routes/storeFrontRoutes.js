@@ -11,11 +11,13 @@ import {
   listShippingTiers
 } from "../controllers/storeFrontController.js";
 import { listSlides } from "../controllers/heroController.js";
+import { getNavCollections } from "../controllers/collectionController.js";
 
 const router = Router();
 
 router.get("/hero", listSlides);
 router.get("/shipping-tiers", listShippingTiers);
+router.get("/collections/nav", getNavCollections);
 
 router.get("/products", listProducts);
 router.get("/products/inventory", inventoryByIds);

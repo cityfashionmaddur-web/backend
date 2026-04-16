@@ -112,6 +112,20 @@ export async function getProductBySlug(req, res) {
     if (!product)
       return res.status(404).json({ message: "Product not found" });
 
+    // Fetch color siblings (other products in the same colorGroup)
+    let colorSiblings = [];
+    if (product.colorGroup) {
+      colorSiblings = await prisma.product.findMany({
+        where: {
+          colorGroup: product.colorGroup,
+          active: true,
+          id: { not: product.id }
+        },
+        select: { id: true, slug: true, colorLabel: true, productImages: { take: 1, select: { url: true } } },
+        orderBy: { id: "asc" }
+      });
+    }
+
     const related = await prisma.product.findMany({
       where: {
         id: { not: product.id },
@@ -123,7 +137,7 @@ export async function getProductBySlug(req, res) {
       orderBy: { id: "desc" }
     });
 
-    res.json({ ...product, related });
+    res.json({ ...product, colorSiblings, related });
 
   } catch (err) {
     console.error("getProductBySlug error:", err);

@@ -30,6 +30,13 @@ import {
   updateSlide,
   deleteSlide
 } from "../controllers/heroController.js";
+import {
+  getCollections,
+  getCollectionById,
+  createCollection,
+  updateCollection,
+  deleteCollection
+} from "../controllers/collectionController.js";
 
 const router = Router();
 
@@ -63,6 +70,13 @@ router.get("/categories/:id", authRequired, adminOnly, getCategoryById);
 router.post("/categories", authRequired, adminOnly, createCategory);
 router.put("/categories/:id", authRequired, adminOnly, updateCategory);
 router.delete("/categories/:id", authRequired, adminOnly, deleteCategory);
+
+// Collections
+router.get("/collections", authRequired, adminOnly, getCollections);
+router.get("/collections/:id", authRequired, adminOnly, getCollectionById);
+router.post("/collections", authRequired, adminOnly, createCollection);
+router.put("/collections/:id", authRequired, adminOnly, updateCollection);
+router.delete("/collections/:id", authRequired, adminOnly, deleteCollection);
 
 // Hero Slides
 router.get("/hero", authRequired, adminOnly, getAdminSlides);
