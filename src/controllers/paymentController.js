@@ -106,7 +106,12 @@ export async function createRazorpayOrder(req, res) {
 
       const priceNum = Number(product.price);
       subtotal += priceNum * qty;
-      orderItemsData.push({ productId: pid, quantity: qty, price: priceNum, size: item.size || null });
+      orderItemsData.push({ 
+        productId: pid, 
+        quantity: qty, 
+        price: priceNum, 
+        size: item.size || null
+      });
     }
 
     if (!orderItemsData.length) return res.status(400).json({ message: "No valid items" });

@@ -34,7 +34,7 @@ async function deleteImagesFromStorage(urls = []) {
 // Create Product (Admin Only)
 export async function createProduct(req, res) {
   try {
-    const { title, description, price, compareAtPrice, variants, images, categoryId, instagramLink, colorGroup, colorLabel, isCombo, comboTopSizes, comboBottomSizes } = req.body;
+    const { title, description, price, compareAtPrice, variants, images, categoryId, instagramLink, colorGroup, colorLabel, isCombo, comboTopSizes, comboBottomSizes, availableColors } = req.body;
 
     if (!title || !price) {
       return res.status(400).json({ message: "Title and price are required" });
@@ -56,12 +56,13 @@ export async function createProduct(req, res) {
         isCombo: Boolean(isCombo),
         comboTopSizes: comboTopSizes && Object.keys(comboTopSizes).length ? comboTopSizes : null,
         comboBottomSizes: comboBottomSizes && Object.keys(comboBottomSizes).length ? comboBottomSizes : null,
+        availableColors: availableColors ? availableColors.trim() : null,
         active: true,
         productImages: {
           create: images?.map((url) => ({ url })) || []
         },
         variants: {
-          create: isCombo ? [] : variants?.map(v => ({ size: v.size, color: v.color || "Default", stock: Number(v.stock) || 0 })) || []
+          create: isCombo ? [] : variants?.map(v => ({ size: v.size, stock: Number(v.stock) || 0 })) || []
         }
       },
       include: { productImages: true, variants: true }
@@ -113,7 +114,7 @@ export async function getProductBySlug(req, res) {
 export async function updateProduct(req, res) {
   try {
     const { id } = req.params;
-    const { images, variants, instagramLink, colorGroup, colorLabel, isCombo, comboTopSizes, comboBottomSizes, ...data } = req.body;
+    const { images, variants, instagramLink, colorGroup, colorLabel, isCombo, comboTopSizes, comboBottomSizes, availableColors, ...data } = req.body;
 
     if (data.categoryId) {
       data.categoryId = Number(data.categoryId);
@@ -131,7 +132,8 @@ export async function updateProduct(req, res) {
       colorLabel: colorLabel || null,
       isCombo: Boolean(isCombo),
       comboTopSizes: comboTopSizes && Object.keys(comboTopSizes).length ? comboTopSizes : null,
-      comboBottomSizes: comboBottomSizes && Object.keys(comboBottomSizes).length ? comboBottomSizes : null
+      comboBottomSizes: comboBottomSizes && Object.keys(comboBottomSizes).length ? comboBottomSizes : null,
+      availableColors: availableColors ? availableColors.trim() : null
     };
 
     if (Array.isArray(images)) {
@@ -144,7 +146,7 @@ export async function updateProduct(req, res) {
     if (Array.isArray(variants)) {
       updateData.variants = {
         deleteMany: {},
-        create: Boolean(isCombo) ? [] : variants.map(v => ({ size: v.size, color: v.color || "Default", stock: Number(v.stock) || 0 }))
+        create: Boolean(isCombo) ? [] : variants.map(v => ({ size: v.size, stock: Number(v.stock) || 0 }))
       };
     }
 
