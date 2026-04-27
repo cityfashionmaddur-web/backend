@@ -48,8 +48,8 @@ export async function createSlide(req, res) {
     const data = req.body;
     console.log("Creating slide with data:", data);
     // Basic validation
-    if (!data.title || !data.image) {
-      return res.status(400).json({ message: "Title and Image are required" });
+    if (!data.image) {
+      return res.status(400).json({ message: "An image is required" });
     }
 
     const slide = await prisma.heroSlide.create({
