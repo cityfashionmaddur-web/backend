@@ -148,7 +148,7 @@ export async function updateAdminProduct(req, res) {
     if (Array.isArray(variants)) {
       updateData.variants = {
         deleteMany: {},
-        create: variants.map(v => ({ size: v.size, color: v.color || "Default", stock: Number(v.stock) || 0 }))
+        create: variants.map(v => ({ size: v.size, stock: Number(v.stock) || 0 }))
       };
     }
 
