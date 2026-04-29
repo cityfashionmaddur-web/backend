@@ -278,3 +278,79 @@ export async function handleRazorpayWebhook(req, res) {
     res.status(500).json({ message: "Failed to process webhook" });
   }
 }
+
+export async function verifyPaymentManual(req, res) {
+  try {
+    const { orderId } = req.params;
+    if (!orderId) return res.status(400).json({ message: "Order ID is required" });
+
+    const order = await prisma.order.findUnique({
+      where: { id: Number(orderId) },
+      include: { items: true }
+    });
+
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    if (order.userId !== req.user.id && req.user.role !== "ADMIN") {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    if (!order.razorpayOrderId) {
+      return res.status(400).json({ message: "No Razorpay Order ID associated with this order" });
+    }
+
+    const rz = ensureRazorpay();
+    const rzOrder = await rz.orders.fetch(order.razorpayOrderId);
+
+    if (!rzOrder) {
+      return res.status(404).json({ message: "Razorpay order not found" });
+    }
+
+    if (rzOrder.status === "paid" && order.status !== "PAID") {
+      await prisma.$transaction(async (tx) => {
+        for (const item of order.items) {
+          const product = await tx.product.findUnique({ where: { id: item.productId } });
+          
+          if (product?.isCombo && item.size && item.size.includes(" | ")) {
+            const parts = item.size.split(" | ");
+            const topSize = parts[0].replace(" Top", "");
+            const bottomSize = parts[1].replace(" Bottom", "");
+            
+            const currentTop = typeof product.comboTopSizes === 'object' && product.comboTopSizes !== null ? { ...product.comboTopSizes } : {};
+            const currentBottom = typeof product.comboBottomSizes === 'object' && product.comboBottomSizes !== null ? { ...product.comboBottomSizes } : {};
+            
+            if (currentTop[topSize] !== undefined) {
+               currentTop[topSize] = Math.max(0, Number(currentTop[topSize]) - item.quantity);
+            }
+            if (currentBottom[bottomSize] !== undefined) {
+               currentBottom[bottomSize] = Math.max(0, Number(currentBottom[bottomSize]) - item.quantity);
+            }
+
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { 
+                comboTopSizes: currentTop,
+                comboBottomSizes: currentBottom
+              }
+            });
+          } else if (item.size) {
+            await tx.productVariant.updateMany({
+              where: { productId: item.productId, size: item.size, stock: { gte: item.quantity } },
+              data: { stock: { decrement: item.quantity } }
+            });
+          }
+        }
+        await tx.order.update({
+          where: { id: order.id },
+          data: { status: "PAID" }
+        });
+      });
+      return res.json({ message: "Payment verified and order updated to PAID", status: "PAID" });
+    }
+
+    return res.json({ message: "Payment status is currently: " + rzOrder.status, status: order.status });
+  } catch (err) {
+    console.error("verifyPaymentManual error:", err);
+    res.status(500).json({ message: "Failed to verify payment" });
+  }
+}
