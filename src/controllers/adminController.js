@@ -311,7 +311,7 @@ export async function updateOrderStatus(req, res) {
           if (item.size) {
             try {
               await tx.productVariant.update({
-                where: { productId_size_color: { productId: item.productId, size: item.size, color: item.color || "Default" } },
+                where: { productId_size: { productId: item.productId, size: item.size } },
                 data: { stock: { increment: item.quantity } }
               });
             } catch (e) {
@@ -324,7 +324,7 @@ export async function updateOrderStatus(req, res) {
           if (item.size) {
             try {
               await tx.productVariant.update({
-                where: { productId_size_color: { productId: item.productId, size: item.size, color: item.color || "Default" } },
+                where: { productId_size: { productId: item.productId, size: item.size } },
                 data: { stock: { decrement: item.quantity } }
               });
             } catch (e) {

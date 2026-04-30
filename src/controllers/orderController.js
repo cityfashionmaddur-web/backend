@@ -111,13 +111,13 @@ export async function createOrder(req, res) {
         try {
           if (item.size) {
             const variant = await tx.productVariant.findUnique({
-              where: { productId_size_color: { productId: item.productId, size: item.size, color: item.color || "Default" } }
+              where: { productId_size: { productId: item.productId, size: item.size } }
             });
             if (!variant || variant.stock < item.quantity) {
               throw new Error(`Insufficient stock for product ID ${item.productId} size ${item.size}`);
             }
             await tx.productVariant.update({
-              where: { productId_size_color: { productId: item.productId, size: item.size, color: item.color || "Default" } },
+              where: { productId_size: { productId: item.productId, size: item.size } },
               data: { stock: { decrement: item.quantity } }
             });
           } else {
@@ -219,7 +219,7 @@ export async function cancelMyPendingOrder(req, res) {
         if (item.size) {
           try {
             await tx.productVariant.update({
-              where: { productId_size_color: { productId: item.productId, size: item.size, color: item.color || "Default" } },
+              where: { productId_size: { productId: item.productId, size: item.size } },
               data: { stock: { increment: item.quantity } }
             });
           } catch (e) {
