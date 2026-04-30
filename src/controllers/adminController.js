@@ -306,7 +306,10 @@ export async function updateOrderStatus(req, res) {
         data: { status }
       });
 
-      if (status === "CANCELLED" && currentOrder.status !== "CANCELLED") {
+      // Only restore stock if the order previously had stock decremented (PAID/SHIPPED/DELIVERED)
+      const stockDecrementedStatuses = ["PAID", "SHIPPED", "DELIVERED"];
+
+      if (status === "CANCELLED" && stockDecrementedStatuses.includes(currentOrder.status)) {
         for (const item of currentOrder.items) {
           if (item.size) {
             try {
@@ -319,7 +322,7 @@ export async function updateOrderStatus(req, res) {
             }
           }
         }
-      } else if (currentOrder.status === "CANCELLED" && status !== "CANCELLED") {
+      } else if (currentOrder.status === "CANCELLED" && stockDecrementedStatuses.includes(status)) {
         for (const item of currentOrder.items) {
           if (item.size) {
             try {

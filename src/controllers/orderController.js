@@ -201,33 +201,16 @@ export async function cancelMyPendingOrder(req, res) {
   try {
     const id = Number(req.params.id);
     const order = await prisma.order.findFirst({
-      where: { id, userId: req.user.id },
-      include: { items: true }
+      where: { id, userId: req.user.id }
     });
     if (!order) return res.status(404).json({ message: "Order not found" });
     if (["PAID", "SHIPPED", "DELIVERED", "CANCELLED"].includes(order.status)) {
       return res.status(400).json({ message: "Order cannot be cancelled" });
     }
 
-    const updated = await prisma.$transaction(async (tx) => {
-      const updatedOrder = await tx.order.update({
-        where: { id },
-        data: { status: "CANCELLED" }
-      });
-
-      for (const item of order.items) {
-        if (item.size) {
-          try {
-            await tx.productVariant.update({
-              where: { productId_size: { productId: item.productId, size: item.size } },
-              data: { stock: { increment: item.quantity } }
-            });
-          } catch (e) {
-            console.warn(`Failed to restore stock for cancelled order item ${item.id}`, e);
-          }
-        }
-      }
-      return updatedOrder;
+    const updated = await prisma.order.update({
+      where: { id },
+      data: { status: "CANCELLED" }
     });
 
     res.json(updated);
