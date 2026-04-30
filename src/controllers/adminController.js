@@ -64,6 +64,11 @@ export async function getDashboardStats(req, res) {
       where: { status: "PENDING" }
     });
 
+    const allVariants = await prisma.productVariant.aggregate({
+      _sum: { stock: true }
+    });
+    const totalInventory = allVariants._sum.stock || 0;
+
     const recentOrders = await prisma.order.findMany({
       take: 5,
       orderBy: { id: "desc" },
@@ -79,6 +84,7 @@ export async function getDashboardStats(req, res) {
       totalCustomers,
       totalRevenue: totalRevenueData._sum.totalAmount || 0,
       pendingOrders,
+      totalInventory,
       recentOrders
     });
   } catch (err) {
@@ -287,9 +293,48 @@ export async function updateOrderStatus(req, res) {
     const { id } = req.params;
     const { status } = req.body;
 
-    const updated = await prisma.order.update({
+    const currentOrder = await prisma.order.findUnique({
       where: { id: Number(id) },
-      data: { status }
+      include: { items: true }
+    });
+
+    if (!currentOrder) return res.status(404).json({ message: "Order not found" });
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const updatedOrder = await tx.order.update({
+        where: { id: Number(id) },
+        data: { status }
+      });
+
+      if (status === "CANCELLED" && currentOrder.status !== "CANCELLED") {
+        for (const item of currentOrder.items) {
+          if (item.size) {
+            try {
+              await tx.productVariant.update({
+                where: { productId_size_color: { productId: item.productId, size: item.size, color: item.color || "Default" } },
+                data: { stock: { increment: item.quantity } }
+              });
+            } catch (e) {
+              console.warn(`Failed to restore stock for cancelled order item ${item.id}`, e);
+            }
+          }
+        }
+      } else if (currentOrder.status === "CANCELLED" && status !== "CANCELLED") {
+        for (const item of currentOrder.items) {
+          if (item.size) {
+            try {
+              await tx.productVariant.update({
+                where: { productId_size_color: { productId: item.productId, size: item.size, color: item.color || "Default" } },
+                data: { stock: { decrement: item.quantity } }
+              });
+            } catch (e) {
+              console.warn(`Failed to decrement stock for un-cancelled order item ${item.id}`, e);
+            }
+          }
+        }
+      }
+
+      return updatedOrder;
     });
 
     res.json(updated);

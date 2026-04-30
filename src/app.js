@@ -17,7 +17,13 @@ import orderRoutes from "./routes/orderRoutes.js";
 const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: true, credentials: true }));
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://cityfashionmaddur.com',
+  'https://www.cityfashionmaddur.com'
+];
+
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(
   express.json({
     verify: (req, res, buf) => {
@@ -43,5 +49,10 @@ app.use("/profile", profileRoutes);
 app.use("/orders", orderRoutes);
 
 
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error("Unhandled Error:", err);
+  res.status(500).json({ message: "Internal Server Error" });
+});
 
 export default app;
